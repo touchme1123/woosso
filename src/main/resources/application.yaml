@@ -1,0 +1,5 @@
+spring.application.name=woosso
+
+spring.datasource.hikari.jdbc-url=jdbc:mysql://localhost:3306/woosso
+spring.datasource.username=root
+spring.datasource.password=0000
