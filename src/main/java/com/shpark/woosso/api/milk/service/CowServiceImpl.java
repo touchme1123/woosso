@@ -5,10 +5,7 @@ import com.shpark.woosso.api.milk.domain.Cow;
 import com.shpark.woosso.api.milk.domain.LactationInfo;
 import com.shpark.woosso.api.milk.domain.MilkRecord;
 import com.shpark.woosso.api.milk.dto.CowDataDto;
-import com.shpark.woosso.api.milk.repository.BreedingRecordRepository;
-import com.shpark.woosso.api.milk.repository.CowRepository;
-import com.shpark.woosso.api.milk.repository.LactationInfoRepository;
-import com.shpark.woosso.api.milk.repository.MilkRecordRepository;
+import com.shpark.woosso.api.milk.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.poi.ss.usermodel.*;
@@ -24,8 +21,6 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
 
 @Service
 @Transactional
@@ -39,6 +34,7 @@ public class CowServiceImpl implements CowService {
     private final MilkRecordRepository milkRecordRepository;
     private final LactationInfoRepository lactationInfoRepository;
 
+
     @Override
     public List<Map<String, Object>> cowDataUpload(MultipartFile file, String farmName) throws Exception {
         log.debug("CowServiceImpl.cowDataUpload Start");
@@ -49,13 +45,9 @@ public class CowServiceImpl implements CowService {
             Workbook workbook;
             workbook = WorkbookFactory.create(excelFile);
 
-            // 파일 확장자를 통해 Workbook 타입 결정 및 지원하지 않는 파일 형식 예외 처리
-            if (file.getOriginalFilename().endsWith(".xlsx")) {
-                workbook = new XSSFWorkbook(excelFile);
-            } else if (file.getOriginalFilename().endsWith(".xls")) {
-                throw new IllegalArgumentException("현재 .xls 파일은 지원하지 않습니다. .xlsx 파일을 업로드해주세요.");
-            } else {
-                throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. 엑셀 파일(.xlsx)을 업로드해주세요.");
+            String originalFilename = file.getOriginalFilename();
+            if (!originalFilename.endsWith(".xlsx") && !originalFilename.endsWith(".xls")) {
+                throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. 엑셀 파일(.xlsx 또는 .xls)을 업로드해주세요.");
             }
 
             // 첫 번째 시트 가져오기
@@ -127,11 +119,23 @@ public class CowServiceImpl implements CowService {
                     .map(dto -> {
                         Cow cow = new Cow();
 
-                        cow.setRegNumber(dto.getRegNumber());
-                        cow.setName(dto.getName());
-                        cow.setShortName(dto.getShortName());
-                        cow.setBirthDate(dto.getBirthDate());
-                        cow.setFarmName(farmName);
+                        Optional<Cow> existCow = cowRepository.findById(dto.getRegNumber());
+
+                        if(existCow.isPresent()) {
+                            cow = existCow.get();
+
+                            cow.setName(dto.getName());
+                            cow.setShortName(dto.getShortName());
+                            cow.setBirthDate(dto.getBirthDate());
+                            cow.setFarmName(farmName);
+
+                        } else {
+                            cow.setRegNumber(dto.getRegNumber());
+                            cow.setName(dto.getName());
+                            cow.setShortName(dto.getShortName());
+                            cow.setBirthDate(dto.getBirthDate());
+                            cow.setFarmName(farmName);
+                        }
 
                         return cow;
                     }).collect(Collectors.toList());
@@ -143,18 +147,33 @@ public class CowServiceImpl implements CowService {
             // DTO 리스트를 BreedingRecord 엔티티 리스트로 변환
             List<BreedingRecord> breedingRecordList = dataList.stream().map(dto -> {
                 BreedingRecord breedingRecord = new BreedingRecord();
-                Cow linkedCow = savedCowMap.get(dto.getRegNumber());
 
-                breedingRecord.setCow(linkedCow);
-                breedingRecord.setTestDate(dto.getTest_date());
-                breedingRecord.setCalvingDate(dto.getCalvingDate());
-                breedingRecord.setDryOffDate(dto.getDryOffDate());
-                breedingRecord.setOpenDays(dto.getOpenDays());
-                breedingRecord.setLastBreedingDate(dto.getLastBreedingDate());
-                breedingRecord.setLastBreedingCount(dto.getLastBreedingCount());
-                breedingRecord.setLastSemenCode(dto.getLastSemenCode());
-                breedingRecord.setDaysToFirstBreeding(dto.getDaysToFirstBreeding());
+                Optional<BreedingRecord> existBreedingRecord = breedingRecordRepository.
+                        findByCow_RegNumberAndTestDate(dto.getRegNumber(),dto.getTest_date());
 
+                // 기존 데이터 존재하면 업데이트 할 DTO 처리 아니면 insert 처리를 위한 dto 생성
+                if(existBreedingRecord.isPresent()) {
+                    breedingRecord = existBreedingRecord.get();
+
+                    breedingRecord.setOpenDays(dto.getOpenDays());
+                    breedingRecord.setLastBreedingDate(dto.getLastBreedingDate());
+                    breedingRecord.setLastBreedingCount(dto.getLastBreedingCount());
+                    breedingRecord.setLastSemenCode(dto.getLastSemenCode());
+                    breedingRecord.setDaysToFirstBreeding(dto.getDaysToFirstBreeding());
+
+                } else {
+                    Cow linkedCow = savedCowMap.get(dto.getRegNumber());
+
+                    breedingRecord.setCow(linkedCow);
+                    breedingRecord.setTestDate(dto.getTest_date());
+                    breedingRecord.setCalvingDate(dto.getCalvingDate());
+                    breedingRecord.setDryOffDate(dto.getDryOffDate());
+                    breedingRecord.setOpenDays(dto.getOpenDays());
+                    breedingRecord.setLastBreedingDate(dto.getLastBreedingDate());
+                    breedingRecord.setLastBreedingCount(dto.getLastBreedingCount());
+                    breedingRecord.setLastSemenCode(dto.getLastSemenCode());
+                    breedingRecord.setDaysToFirstBreeding(dto.getDaysToFirstBreeding());
+                }
                 return breedingRecord;
             }).collect(Collectors.toList());
 
@@ -163,28 +182,53 @@ public class CowServiceImpl implements CowService {
             // DTO 리스트를 milkRecord 엔티티 리스트로 변환
             List<MilkRecord> milkRecordList = dataList.stream().map(dto -> {
                 MilkRecord milkRecord = new MilkRecord();
-                Cow linkedCow = savedCowMap.get(dto.getRegNumber());
 
-                milkRecord.setCow(linkedCow);
-                milkRecord.setTestDate(dto.getTest_date());
-                milkRecord.setMilkYield(dto.getMilkYield());
-                milkRecord.setFatPct(dto.getFatPct());
-                milkRecord.setProteinPct(dto.getProteinPct());
-                milkRecord.setSnfPct(dto.getSnfPct());
-                milkRecord.setScc(dto.getScc());
-                milkRecord.setMun(dto.getMun());
-                milkRecord.setYield305(dto.getYield305());
-                milkRecord.setFat305(dto.getFat305());
-                milkRecord.setProtein305(dto.getProtein305());
-                milkRecord.setSnf305(dto.getSnf305());
-                milkRecord.setMeYield(dto.getMeYield());
-                milkRecord.setMeFat(dto.getMeFat());
-                milkRecord.setMeProtein(dto.getMeProtein());
-                milkRecord.setMeSnf(dto.getMeSnf());
-                milkRecord.setPeakScc(dto.getPeakScc());
+                Optional<MilkRecord> existMilkRecord = milkRecordRepository
+                        .findByCow_RegNumberAndTestDate(dto.getRegNumber(),dto.getTest_date());
+
+                // 기존 데이터 존재하면 업데이트 할 DTO 처리 아니면 insert 처리를 위한 dto 생성
+                if(existMilkRecord.isPresent()) {
+                    milkRecord = existMilkRecord.get();
+
+                    milkRecord.setMilkYield(dto.getMilkYield());
+                    milkRecord.setFatPct(dto.getFatPct());
+                    milkRecord.setProteinPct(dto.getProteinPct());
+                    milkRecord.setSnfPct(dto.getSnfPct());
+                    milkRecord.setScc(dto.getScc());
+                    milkRecord.setMun(dto.getMun());
+                    milkRecord.setYield305(dto.getYield305());
+                    milkRecord.setFat305(dto.getFat305());
+                    milkRecord.setProtein305(dto.getProtein305());
+                    milkRecord.setSnf305(dto.getSnf305());
+                    milkRecord.setMeYield(dto.getMeYield());
+                    milkRecord.setMeFat(dto.getMeFat());
+                    milkRecord.setMeProtein(dto.getMeProtein());
+                    milkRecord.setMeSnf(dto.getMeSnf());
+                    milkRecord.setPeakScc(dto.getPeakScc());
+
+                } else {
+                    Cow linkedCow = savedCowMap.get(dto.getRegNumber());
+
+                    milkRecord.setCow(linkedCow);
+                    milkRecord.setTestDate(dto.getTest_date());
+                    milkRecord.setMilkYield(dto.getMilkYield());
+                    milkRecord.setFatPct(dto.getFatPct());
+                    milkRecord.setProteinPct(dto.getProteinPct());
+                    milkRecord.setSnfPct(dto.getSnfPct());
+                    milkRecord.setScc(dto.getScc());
+                    milkRecord.setMun(dto.getMun());
+                    milkRecord.setYield305(dto.getYield305());
+                    milkRecord.setFat305(dto.getFat305());
+                    milkRecord.setProtein305(dto.getProtein305());
+                    milkRecord.setSnf305(dto.getSnf305());
+                    milkRecord.setMeYield(dto.getMeYield());
+                    milkRecord.setMeFat(dto.getMeFat());
+                    milkRecord.setMeProtein(dto.getMeProtein());
+                    milkRecord.setMeSnf(dto.getMeSnf());
+                    milkRecord.setPeakScc(dto.getPeakScc());
+                }
 
                 return milkRecord;
-
             }).collect(Collectors.toList());
 
             milkRecordRepository.saveAll(milkRecordList);
@@ -192,21 +236,42 @@ public class CowServiceImpl implements CowService {
             // DTO 리스트를 lactationInfo 엔티티 리스트로 변환
             List<LactationInfo> lactationInfoList = dataList.stream().map(dto -> {
                 LactationInfo lactationInfo = new LactationInfo();
-                Cow linkedCow = savedCowMap.get(dto.getRegNumber());
 
-                lactationInfo.setCow(linkedCow);
-                lactationInfo.setTestDate(dto.getTest_date());
-                lactationInfo.setParity(dto.getParity());
-                lactationInfo.setDaysAtLact(dto.getDaysAtLact());
-                lactationInfo.setPrevLactPersistence(dto.getPrevLactPersistence());
-                lactationInfo.setCurrLactPersistenceAtLact(dto.getCurrLactPersistenceAtLact());
-                lactationInfo.setDaysToPeak(dto.getDaysToPeak());
-                lactationInfo.setLatePeakYield(dto.getLatePeakYield());
-                lactationInfo.setEarlyAvgFat(dto.getEarlyAvgFat());
-                lactationInfo.setEarlyAvgProtein(dto.getEarlyAvgProtein());
-                lactationInfo.setEarlyAvgMun(dto.getEarlyAvgMun());
-                lactationInfo.setLastYieldDryOff(dto.getLastYieldDryOff());
-                lactationInfo.setPrevLactDryOffYield(dto.getPrevLactDryOffYield());
+                Optional<LactationInfo> existLactationInfo = lactationInfoRepository
+                        .findByCow_RegNumberAndTestDate(dto.getRegNumber(), dto.getTest_date());
+
+                // 기존 데이터 존재하면 업데이트 할 DTO 처리 아니면 insert 처리를 위한 dto 생성
+                if(existLactationInfo.isPresent()) {
+                    lactationInfo = existLactationInfo.get();
+
+                    lactationInfo.setDaysAtLact(dto.getDaysAtLact());
+                    lactationInfo.setPrevLactPersistence(dto.getPrevLactPersistence());
+                    lactationInfo.setCurrLactPersistenceAtLact(dto.getCurrLactPersistenceAtLact());
+                    lactationInfo.setDaysToPeak(dto.getDaysToPeak());
+                    lactationInfo.setLatePeakYield(dto.getLatePeakYield());
+                    lactationInfo.setEarlyAvgFat(dto.getEarlyAvgFat());
+                    lactationInfo.setEarlyAvgProtein(dto.getEarlyAvgProtein());
+                    lactationInfo.setEarlyAvgMun(dto.getEarlyAvgMun());
+                    lactationInfo.setLastYieldDryOff(dto.getLastYieldDryOff());
+                    lactationInfo.setPrevLactDryOffYield(dto.getPrevLactDryOffYield());
+
+                } else {
+                    Cow linkedCow = savedCowMap.get(dto.getRegNumber());
+
+                    lactationInfo.setCow(linkedCow);
+                    lactationInfo.setTestDate(dto.getTest_date());
+                    lactationInfo.setParity(dto.getParity());
+                    lactationInfo.setDaysAtLact(dto.getDaysAtLact());
+                    lactationInfo.setPrevLactPersistence(dto.getPrevLactPersistence());
+                    lactationInfo.setCurrLactPersistenceAtLact(dto.getCurrLactPersistenceAtLact());
+                    lactationInfo.setDaysToPeak(dto.getDaysToPeak());
+                    lactationInfo.setLatePeakYield(dto.getLatePeakYield());
+                    lactationInfo.setEarlyAvgFat(dto.getEarlyAvgFat());
+                    lactationInfo.setEarlyAvgProtein(dto.getEarlyAvgProtein());
+                    lactationInfo.setEarlyAvgMun(dto.getEarlyAvgMun());
+                    lactationInfo.setLastYieldDryOff(dto.getLastYieldDryOff());
+                    lactationInfo.setPrevLactDryOffYield(dto.getPrevLactDryOffYield());
+                }
 
                 return lactationInfo;
             }).collect(Collectors.toList());
@@ -216,6 +281,14 @@ public class CowServiceImpl implements CowService {
 
         log.debug("CowServiceImpl.cowDataUpload End");
         return List.of(Map.of("data", dataList));
+    }
+
+    @Override
+    public List<CowDataDto> findAllByFarmNameAndTestDate(String farmName, LocalDate testDate) {
+        log.debug("CowServiceImpl.findAllInCowAndBreedingRecord Start");
+        List<CowDataDto> result = cowRepository.findAllByFarmNameAndTestDate(farmName, testDate);
+        log.debug("CowServiceImpl.findAllInCowAndBreedingRecord End");
+        return result;
     }
 
     // --- 헬퍼 메서드들: 셀 값을 타입별로 안전하게 가져오기 ---

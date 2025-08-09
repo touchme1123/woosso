@@ -1,5 +1,6 @@
 package com.shpark.woosso.api.milk.dto;
 
+import com.querydsl.core.annotations.QueryProjection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,7 +10,6 @@ import java.time.LocalDate;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
 public class CowDataDto {
     //Cow
@@ -58,5 +58,85 @@ public class CowDataDto {
     private Double earlyAvgMun; // 비유 초기 평균 MUN
     private Double lastYieldDryOff; // 건유 전 마지막 유량
     private Double prevLactDryOffYield; // 전산차 건유 전 유량
+
+    //전체 필드 생성자
+    @QueryProjection
+    public CowDataDto(String regNumber, String name, Integer shortName, LocalDate birthDate, String farmName,
+                      LocalDate calvingDate, LocalDate dryOffDate, Integer openDays, LocalDate lastBreedingDate,
+                      Integer lastBreedingCount, String lastSemenCode, Integer daysToFirstBreeding, LocalDate test_date,
+                      Double milkYield, Double fatPct, Double proteinPct, Double snfPct, Integer scc, Double mun,
+                      Integer yield305, Integer fat305, Integer protein305, Integer snf305, Integer meYield,
+                      Integer meFat, Integer meProtein, Integer meSnf, Integer peakScc, Integer parity,
+                      Integer DaysAtLact, Double prevLactPersistence, Double currLactPersistenceAtLact,
+                      Integer daysToPeak, Double latePeakYield, Double earlyAvgFat, Double earlyAvgProtein,
+                      Double earlyAvgMun, Double lastYieldDryOff, Double prevLactDryOffYield) {
+        this.regNumber = regNumber;
+        this.name = name;
+        this.shortName = shortName;
+        this.birthDate = birthDate;
+        this.farmName = farmName;
+
+        this.calvingDate = calvingDate;
+        this.dryOffDate = dryOffDate;
+        this.openDays = openDays;
+        this.lastBreedingDate = lastBreedingDate;
+        this.lastBreedingCount = lastBreedingCount;
+        this.lastSemenCode = lastSemenCode;
+        this.daysToFirstBreeding = daysToFirstBreeding;
+
+        this.test_date = test_date;
+        this.milkYield = milkYield;
+        this.fatPct = fatPct;
+        this.proteinPct = proteinPct;
+        this.snfPct = snfPct;
+        this.scc = scc;
+        this.mun = mun;
+        this.yield305 = yield305;
+        this.fat305 = fat305;
+        this.protein305 = protein305;
+        this.snf305 = snf305;
+        this.meYield = meYield;
+        this.meFat = meFat;
+        this.meProtein = meProtein;
+        this.meSnf = meSnf;
+        this.peakScc = peakScc;
+
+        this.parity = parity;
+        this.DaysAtLact = DaysAtLact;
+        this.prevLactPersistence = prevLactPersistence;
+        this.currLactPersistenceAtLact = currLactPersistenceAtLact;
+        this.daysToPeak = daysToPeak;
+        this.latePeakYield = latePeakYield;
+        this.earlyAvgFat = earlyAvgFat;
+        this.earlyAvgProtein = earlyAvgProtein;
+        this.earlyAvgMun = earlyAvgMun;
+        this.lastYieldDryOff = lastYieldDryOff;
+        this.prevLactDryOffYield = prevLactDryOffYield;
+    }
+
+
+    //cow 와 breedingRecord join 테이블 생성자
+    @QueryProjection
+    public CowDataDto(String regNumber, String name, Integer shortName, LocalDate birthDate, String farmName,
+                      LocalDate calvingDate, LocalDate dryOffDate, Integer openDays,
+                      LocalDate lastBreedingDate, Integer lastBreedingCount, String lastSemenCode, Integer daysToFirstBreeding,
+                      LocalDate test_date) {
+        this.regNumber = regNumber;
+        this.name = name;
+        this.shortName = shortName;
+        this.birthDate = birthDate;
+        this.farmName = farmName;
+
+        this.calvingDate = calvingDate;
+        this.dryOffDate = dryOffDate;
+        this.openDays = openDays;
+        this.lastBreedingDate = lastBreedingDate;
+        this.lastBreedingCount = lastBreedingCount;
+        this.lastSemenCode = lastSemenCode;
+        this.daysToFirstBreeding = daysToFirstBreeding;
+
+        this.test_date = test_date;
+
+    }
 
 }

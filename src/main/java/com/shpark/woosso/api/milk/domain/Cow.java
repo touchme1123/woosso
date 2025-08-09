@@ -1,14 +1,12 @@
 package com.shpark.woosso.api.milk.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "t_cows")
@@ -33,4 +31,9 @@ public class Cow {
     @Column(name = "farm_name")
     private String farmName; // 농가이름
 
+    @OneToMany(mappedBy = "cow", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LactationInfo> lactationInfo;
+
+    @OneToMany(mappedBy = "cow", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BreedingRecord> breedingRecord;
 }

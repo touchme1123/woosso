@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: woosso-deployment
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: woosso-backend-app
+
+  template:
+    metadata:
+      labels:
+        app: woosso-backend-app
+    spec:
+      containers:
+        - name: woosso-container
+          image: woosso:1.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: mysql-service
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: woosso-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: woosso-config
+                  key: DB_NAME
+            - name: DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: woosso-config
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: woosso-secret
+                  key: DB_PASSWORD
+

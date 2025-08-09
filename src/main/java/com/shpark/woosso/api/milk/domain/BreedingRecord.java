@@ -8,10 +8,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "t_breeding_records")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "t_breeding_records", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"reg_number", "test_date"})
+})
 public class BreedingRecord {
 
     @Id
