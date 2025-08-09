@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### secret info ###
+application.yml
+application.properties
+.env
+*.key
+*.pem
